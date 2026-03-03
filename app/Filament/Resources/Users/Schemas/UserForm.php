@@ -3,8 +3,11 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Hash;
 
 class UserForm
 {
@@ -12,16 +15,36 @@ class UserForm
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('email')
-                    ->label('Email address')
-                    ->email()
-                    ->required(),
-                DateTimePicker::make('email_verified_at'),
-                TextInput::make('password')
-                    ->password()
-                    ->required(),
-            ]);
+                Section::make([
+                    TextInput::make('name')
+                        ->required(),
+                    TextInput::make('email')
+                        ->label('Email address')
+                        ->email()
+                        ->unique()
+                        ->required(),
+
+                    TextInput::make('password')
+                        ->password()
+                        ->same('password_confirmation')
+                        ->revealable()
+                        ->dehydrateStateUsing(fn(string $state): string => Hash::make($state))
+                        ->saved(fn(?string $state): bool => filled($state))
+                        ->required((fn(string $operation): bool => $operation === 'create')),
+                    TextInput::make('password_confirmation')
+                        ->password()
+                        ->revealable()
+                        ->saved(false)
+                        ->visible(fn(string $operation): bool => $operation === 'create'),
+                    Select::make('roles')
+                        ->relationship('roles', 'name')
+//                    ->multiple()
+                        ->preload()
+                        ->required()
+                        ->searchable(),
+                    DateTimePicker::make('email_verified_at'),
+                ])->columns(1),
+
+            ])->columns(1);
     }
 }
